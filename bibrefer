@@ -1,0 +1,80 @@
+#!/bin/sh
+
+colbind () { # Usage: [VAR1] [VAR2]
+    # Combine two variables line by line
+    awk -v awk_lpart="$1" -v awk_rpart="$2" 'BEGIN{
+	split(awk_lpart,lp,/\n/)
+	split(awk_rpart,rp,/\n/)
+	for (i=1; i in lp; i++) {
+	    print lp[i],"--- " rp[i]
+	}
+    }'
+}
+
+refgen () { # Usage: [PATTERN]
+    ref="$(awk -v RS='@' "$1" $bibfile | head -n 1 | sed "s/.*{//g; s/,$//g")"
+}
+
+clipcopy () { # Usage:  clipcopy [CONTENT]
+    if [ -n "$1" ] && command -v xclip; then
+	printf '%s' "$1" | xclip -selection clipboard
+    elif [ -n "$1" ] && command -v xsel; then
+	printf '%s' "$1" | xsel --clipboard
+    fi
+}
+
+RefBIB () {
+    criterion="$(printf '%s\n' "title" "authoryear" "mixed" | dmenu -i -p "Choose selection criterion: ")"
+    title="$(cat -u $bibfile | grep "	title = {" | sed "s/^	title = {//g; s/},$//g")"
+    author="$(cat -u $bibfile | grep "	author = {" | sed "s/^	author = {//g; s/},$//g")"
+    year="$(cat -u $bibfile | grep "	year =" | sed "s/^	year = //g; s/},$//g; s/}$//g; s/,$//g")"
+    date="$(cat -u $bibfile | grep "	date =" | sed "s/^	date = {//g; s/},$//g; s/}$//g")"
+    case "$criterion" in
+	"title")
+	    cite="$(printf '%s' "$title" | dmenu -i -l 5 -p "Selct reference title: ")"
+	    refgen "/$cite/"
+	    clipcopy "$ref"
+	    ;;
+	"authoryear")
+	    cite="$(
+	    if [ -n "$date" ]; then
+		colbind "$author" "$date" | dmenu -i -l 5 -p "Select author and date: "
+	    else
+		colbind "$author" "$year" | dmenu -i -l 5 -p "Select author and year: "
+	    fi
+	    )"
+	    cite_author="${cite%% --- *}"
+	    cite_year="${cite##* --- }"
+	    refgen "/$cite_author/ && /$cite_year/"
+	    clipcopy "$ref"
+	    ;;
+	"mixed")
+	    cite="$(
+	    if [ -n "$date" ]; then
+		TMP="$(colbind "$author" "$date")"
+		colbind "$TMP" "$title" | dmenu -i -l 5 -p "Select author, date and title: "
+		unset TMP
+	    else
+		TMP="$(colbind "$author" "$year")"
+		colbind "$TMP" "$title" | dmenu -i -l 5 -p "Select author, year and title: "
+		unset TMP
+	    fi
+	    )"
+	    cite_title="${cite##* --- }"
+	    refgen "/$cite_title/"
+	    clipcopy "$ref"
+	    ;;
+    esac
+}
+
+message="Need to either
+1. set up environment variable "BIB" or
+2. give bibselect arguments"
+
+if [ $# -ne 0 ]; then
+    bibfile="$1"
+elif : "${BIB:?$message}"; then
+    bibfile="$BIB"
+fi
+
+RefBIB
