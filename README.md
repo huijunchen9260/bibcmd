@@ -4,6 +4,8 @@ A collection of POSIX shell scripts to manage and utilize bibtex
 
 Used in upcoming project `dmenubib`.
 
+[Some GIF](https://imgur.com/a/tMrFy3C)
+
 ## `bibsearch`
 
 Need to set `$BIB` environment variable into your `.bib` file.
