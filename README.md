@@ -21,7 +21,7 @@ Search doi and generate bibtex.
 
 ## `bibrefer`
 
-List papers in `.bib` file based on
+List papers in `.bib` file on dmenu based on
 
 1. title
 2. authoryear
