@@ -55,7 +55,7 @@ BibGen () {
     if [ -n "$doi" ]; then
 	bibtex="$(curl -s "http://api.crossref.org/works/$doi/transform/application/x-bibtex")"
 	if echo "$bibtex" | grep -E "^@[a-z]*{.*," && grep -F "$info" $BIB; then
-		printf '%s\n' "$bibtex" >> "$BIB" && echo "Reference added to $BIB"
+		printf '%s\n' "$bibtex" >> "$BIB" && echo "Reference added to $BIB" && bibnl
 	fi
     fi
 }
@@ -63,7 +63,6 @@ BibGen () {
 CheckArg "$1"
 if [ -z "$doi" ]; then
     DoiGen
-    bibnl
     BibGen
 else
     BibGen
