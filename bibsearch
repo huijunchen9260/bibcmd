@@ -1,12 +1,12 @@
 #!/bin/sh
 
 CheckArg () {
-    doi_regex='[https://doi.org/]?10\.[0-9]{4}[0-9.]*/[^[:space:]]*'
+    doi_regex='(https://doi.org/)?10\.[0-9]{4}[0-9.]*/[^[:space:]]*'
     if echo "$1" | grep -E -q -o "$doi_regex"; then
 	doi="$1"
-    elif [ "$(xdg-mime query filetype "$1")" = "application/pdf" ]; then
+    elif [ "$(dd if="$1" count=4 bs=1 status=none)" = "%PDF" ]; then
 	doi="$(pdfinfo "$1" | grep -E -q -o "$doi_regex")"
-	[ -z "$doi" ] && info="$(pdfinfo "$1" | grep -io "Title:.*" | awk -F ':          ' '{print $2}')"
+	[ -z "$doi" ] && { info="$(pdfinfo "$1" | grep "^Title")"; info="${info#Title: *}"; }
 	[ -z "$info" ] && info="$(pdftotext "$1" 2>/dev/null - | head -n 4)"
 	[ -z "$info" ] && echo "Cannot identify doi or title from pdf file." && exit 1
     else
@@ -54,7 +54,7 @@ bibnl () {
 BibGen () {
     if [ -n "$doi" ]; then
 	bibtex="$(curl -s "http://api.crossref.org/works/$doi/transform/application/x-bibtex")"
-	if echo "$bibtex" | grep -E "^@[a-z]*{.*," && [ -z "$(awk -v RS='@' "/$info/" $BIB)" ]; then
+	if echo "$bibtex" | grep -E "^@[a-z]*{.*," && grep -F "$info" $BIB; then
 		printf '%s\n' "$bibtex" >> "$BIB" && echo "Reference added to $BIB"
 	fi
     fi
