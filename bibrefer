@@ -11,8 +11,9 @@ colbind () { # Usage: [VAR1] [VAR2]
     }'
 }
 
-refgen () { # Usage: [PATTERN]
-    ref="$(awk -v RS='@' "$1" $bibfile | head -n 1 | sed "s/.*{//g; s/,$//g")"
+refgen () { # Usage: refgen [PATTERN]
+    file="$(cat -u "$bibfile" | sed 's/\\//g')"
+    ref="$(printf '%s' "$file" | awk -v RS='@' "$1" | head -n 1 | sed "s/.*{//g; s/,$//g")"
 }
 
 clipcopy () { # Usage:  clipcopy [CONTENT]
@@ -25,15 +26,15 @@ clipcopy () { # Usage:  clipcopy [CONTENT]
 
 RefBIB () {
     criterion="$(printf '%s\n' "title" "authoryear" "mixed" | dmenu -i -p "Choose selection criterion: ")"
-    title="$(cat -u $bibfile | grep "	title = {" | sed "s/^	title = {//g; s/},$//g")"
-    author="$(cat -u $bibfile | grep "	author = {" | sed "s/^	author = {//g; s/},$//g")"
-    year="$(cat -u $bibfile | grep "	year =" | sed "s/^	year = //g; s/},$//g; s/}$//g; s/,$//g")"
-    date="$(cat -u $bibfile | grep "	date =" | sed "s/^	date = {//g; s/},$//g; s/}$//g")"
+    title="$(cat -u $BIB | grep -io "title.*" | sed "s/^title = {//g; s/},$//g")"
+    author="$(cat -u $BIB | grep -io "author.*" | sed "s/^author = {//g; s/},$//g")"
+    year="$(cat -u $BIB | grep -io "year.*" | sed "s/^year = //g; s/,$//g")"
+    date="$(cat -u $BIB | grep -io "date.*" | sed "s/^date = {//g; s/},$//g")"
     case "$criterion" in
 	"title")
 	    cite="$(printf '%s' "$title" | dmenu -i -l 5 -p "Selct reference title: ")"
 	    refgen "/$cite/"
-	    clipcopy "$ref"
+	    [ -n "$ref" ] && clipcopy "$ref" && echo "$ref copied to clipboard"
 	    ;;
 	"authoryear")
 	    cite="$(
@@ -46,7 +47,7 @@ RefBIB () {
 	    cite_author="${cite%% --- *}"
 	    cite_year="${cite##* --- }"
 	    refgen "/$cite_author/ && /$cite_year/"
-	    clipcopy "$ref"
+	    [ -n "$ref" ] && clipcopy "$ref" && echo "$ref copied to clipboard"
 	    ;;
 	"mixed")
 	    cite="$(
@@ -62,7 +63,7 @@ RefBIB () {
 	    )"
 	    cite_title="${cite##* --- }"
 	    refgen "/$cite_title/"
-	    clipcopy "$ref"
+	    [ -n "$ref" ] && clipcopy "$ref" && echo "$ref copied to clipboard"
 	    ;;
     esac
 }
